@@ -1,6 +1,6 @@
 # specconvert
 
-Small wavelength and spectral flux density conversions for Python 3.11+, built on NumPy and Astropy.
+Small wavelength and spectral flux density conversions using Astropy.
 
 ## Install
 
