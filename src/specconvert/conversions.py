@@ -3,7 +3,13 @@
 import numpy as np
 import astropy.units as u
 
+FNU_CGS  = u.erg / (u.s * u.cm**2 * u.Hz)
+FLAM_CGS = u.erg / (u.s * u.cm**2 * u.AA)
+FLAM_SI  = u.W / u.m**3
 MAGGIE_UNIT = u.def_unit("maggie", 3631 * u.Jy)
+
+# Old names
+# Todo: Deprecate across codebase
 CGS_FLUX_UNIT = u.erg / (u.s * u.cm**2 * u.AA)
 SI_FLUX_UNIT = u.W / u.m**3
 
