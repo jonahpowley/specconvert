@@ -4,7 +4,7 @@ import astropy.units as u
 import numpy as np
 from astropy.utils.masked import Masked
 
-from specconvert import CGS_FLUX_UNIT, MAGGIE_UNIT, SI_FLUX_UNIT, convert_flux, convert_flux_value, convert_wave
+from specconvert import FLAM_CGS, MAGGIE_UNIT, SI_FLUX_UNIT, convert_flux, convert_flux_value, convert_wave
 
 
 class ConversionMatrixTests(unittest.TestCase):
@@ -12,7 +12,7 @@ class ConversionMatrixTests(unittest.TestCase):
         self.wave = np.array([0.4, 1.2, 5.0]) * u.um
         self.flux_jy = np.array([1e-6, 1e-4, 1.0])
         self.sigma_jy = self.flux_jy * np.array([0.1, 0.2, 0.03])
-        self.units = [u.Jy, u.mJy, u.uJy, u.nJy, u.erg / (u.s * u.cm**2 * u.Hz), CGS_FLUX_UNIT, SI_FLUX_UNIT, MAGGIE_UNIT, u.ABmag]
+        self.units = [u.Jy, u.mJy, u.uJy, u.nJy, u.erg / (u.s * u.cm**2 * u.Hz), FLAM_CGS, SI_FLUX_UNIT, MAGGIE_UNIT, u.ABmag]
 
     def expected(self, unit):
         f = self.flux_jy
@@ -28,7 +28,7 @@ class ConversionMatrixTests(unittest.TestCase):
         if unit == u.erg / (u.s * u.cm**2 * u.Hz):
             return f * 1e-23
         flam = f * 1e-23 * 2.99792458e18 / lam**2
-        if unit == CGS_FLUX_UNIT:
+        if unit == FLAM_CGS:
             return flam
         if unit == SI_FLUX_UNIT:
             return flam * 1e7
@@ -48,7 +48,7 @@ class ConversionMatrixTests(unittest.TestCase):
         if unit == u.erg / (u.s * u.cm**2 * u.Hz):
             return self.flux_jy * 1e-23, self.sigma_jy * 1e-23
         flam = self.flux_jy * 1e-23 * 2.99792458e18 / self.wave.to_value(u.AA)**2
-        if unit == CGS_FLUX_UNIT:
+        if unit == FLAM_CGS:
             return flam, flam * np.array([0.1, 0.2, 0.03])
         if unit == SI_FLUX_UNIT:
             return flam * 1e7, flam * 1e7 * np.array([0.1, 0.2, 0.03])
@@ -63,7 +63,7 @@ class ConversionMatrixTests(unittest.TestCase):
                 with self.subTest(source=source, target=target):
                     values, errors = self.input_for(source)
                     fnu_units = (u.Jy, u.mJy, u.uJy, u.nJy, self.units[4], MAGGIE_UNIT, u.ABmag)
-                    flam_units = (CGS_FLUX_UNIT, SI_FLUX_UNIT)
+                    flam_units = (FLAM_CGS, SI_FLUX_UNIT)
                     crosses_density_types = (source in fnu_units and target in flam_units) or (source in flam_units and target in fnu_units)
                     wave = self.wave if crosses_density_types else None
                     actual, sigma = convert_flux(values, source, target, err=errors, wave=wave)
@@ -125,37 +125,37 @@ class ConversionMatrixTests(unittest.TestCase):
         wave_um = wave_aa.to(u.um)
         wave_m = wave_aa.to(u.m)
         flux = np.ones((3, 2, 2)) * 1e-20
-        result_aa, _ = convert_flux(flux, CGS_FLUX_UNIT, u.Jy, wave=wave_aa[:, None, None], return_quantity=True)
-        result_nm, _ = convert_flux(flux, CGS_FLUX_UNIT, u.Jy, wave=wave_nm[:, None, None], return_quantity=True)
-        result_um, _ = convert_flux(flux, CGS_FLUX_UNIT, u.Jy, wave=wave_um[:, None, None], return_quantity=True)
-        result_m, _ = convert_flux(flux, CGS_FLUX_UNIT, u.Jy, wave=wave_m[:, None, None], return_quantity=True)
+        result_aa, _ = convert_flux(flux, FLAM_CGS, u.Jy, wave=wave_aa[:, None, None], return_quantity=True)
+        result_nm, _ = convert_flux(flux, FLAM_CGS, u.Jy, wave=wave_nm[:, None, None], return_quantity=True)
+        result_um, _ = convert_flux(flux, FLAM_CGS, u.Jy, wave=wave_um[:, None, None], return_quantity=True)
+        result_m, _ = convert_flux(flux, FLAM_CGS, u.Jy, wave=wave_m[:, None, None], return_quantity=True)
         self.assertEqual(result_aa.shape, (3, 2, 2))
         for result in (result_nm, result_um, result_m):
             np.testing.assert_allclose(result_aa.value, result.value)
-        scalar_wave, _ = convert_flux(1e-20, CGS_FLUX_UNIT, u.Jy, wave=5000 * u.AA, return_quantity=True)
+        scalar_wave, _ = convert_flux(1e-20, FLAM_CGS, u.Jy, wave=5000 * u.AA, return_quantity=True)
         self.assertEqual(scalar_wave.shape, ())
         # Equal-axis last dimension remains ordinary NumPy broadcasting semantics.
-        last_axis_wave, _ = convert_flux(np.ones((3, 3)), CGS_FLUX_UNIT, u.Jy, wave=wave_aa, return_quantity=True)
+        last_axis_wave, _ = convert_flux(np.ones((3, 3)), FLAM_CGS, u.Jy, wave=wave_aa, return_quantity=True)
         self.assertEqual(last_axis_wave.shape, (3, 3))
         np.testing.assert_allclose(last_axis_wave.value[0], last_axis_wave.value[1])
 
     def test_wave_requirements_and_validation(self):
         with self.assertRaises(ValueError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy)
+            convert_flux([1.0], FLAM_CGS, u.Jy)
         with self.assertRaises(TypeError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy, wave=[5000])
+            convert_flux([1.0], FLAM_CGS, u.Jy, wave=[5000])
         with self.assertRaises(ValueError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy, wave=[5000] * u.s)
+            convert_flux([1.0], FLAM_CGS, u.Jy, wave=[5000] * u.s)
         with self.assertRaises(ValueError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy, wave=[0] * u.AA)
+            convert_flux([1.0], FLAM_CGS, u.Jy, wave=[0] * u.AA)
         convert_flux([1.0], u.mJy, u.Jy)
         with self.assertRaises(ValueError):
-            convert_flux(np.ones((3, 4)), CGS_FLUX_UNIT, u.Jy, wave=self.wave)
+            convert_flux(np.ones((3, 4)), FLAM_CGS, u.Jy, wave=self.wave)
         with self.assertRaises(ValueError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy, wave=[-5000] * u.AA)
+            convert_flux([1.0], FLAM_CGS, u.Jy, wave=[-5000] * u.AA)
         for invalid_wave in (np.nan, np.inf):
             with self.subTest(wave=invalid_wave), self.assertRaises(ValueError):
-                convert_flux(1.0, CGS_FLUX_UNIT, u.Jy, wave=invalid_wave * u.AA)
+                convert_flux(1.0, FLAM_CGS, u.Jy, wave=invalid_wave * u.AA)
         with self.assertRaises(u.UnitConversionError):
             convert_flux([1.0] * u.m, u.Jy, u.mJy)
         with self.assertRaises(u.UnitConversionError):
@@ -207,7 +207,7 @@ class ConversionMatrixTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             convert_flux([1.0], u.Jy, u.mJy, err=Masked([0.1], mask=[True]) * u.Jy)
         with self.assertRaises(TypeError):
-            convert_flux([1.0], CGS_FLUX_UNIT, u.Jy, wave=Masked([5000], mask=[True]) * u.AA)
+            convert_flux([1.0], FLAM_CGS, u.Jy, wave=Masked([5000], mask=[True]) * u.AA)
 
     def test_inputs_are_unchanged(self):
         values = np.array([1.0, 2.0])
