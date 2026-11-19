@@ -28,7 +28,8 @@ Run these commands in the Python environment used by your scripts or notebooks. 
 import astropy.units as u
 import numpy as np
 
-from specconvert import FLAM_CGS, SI_FLUX_UNIT, MAGGIE_UNIT, convert_flux, convert_flux_value, convert_wave
+from specconvert import FLAM_CGS, MAGGIE_UNIT, convert_flux, convert_flux_value, convert_wave
+from specconvert.conversions import FLAM_SI
 ```
 
 ### Simple conversions
@@ -38,10 +39,12 @@ For the usual conversions handled by Astropy's `.to()`, supply the values and th
 ```python
 wave_A = convert_wave([0.5, 1.0], from_unit=u.um, to_unit=u.AA)
 flux_njy = convert_flux_value([1.2, 0.8], from_unit="uJy", to_unit="nJy")
-flux_cgs = convert_flux_value(1.0, from_unit=SI_FLUX_UNIT, to_unit=FLAM_CGS)
+flux_cgs = convert_flux_value(1.0, from_unit=FLAM_SI, to_unit=FLAM_CGS)
 ```
 
 Scalars, arrays and Astropy Quantities are accepted. Results are numeric by default; use `return_quantity=True` to keep the output units. Quantity inputs must have units compatible with `from_unit`. Unit strings accepted by Astropy can also be used.
+
+Optional arguments (`err`, `wave` and `return_quantity`, where supported) must be passed by keyword.
 
 ### Fluxes and uncertainties
 
@@ -65,7 +68,7 @@ err = np.array([1e-20, 2e-20])
 flux_jy, err_jy = convert_flux(flux, from_unit=FLAM_CGS, to_unit=u.Jy, err=err, wave=wave)
 ```
 
-Wavelengths may be in Å, nm, µm or other length units, and must be finite and positive. Wavelength is only needed when changing between the two spectral-density representations. Conversions such as µJy to nJy, or SI to CGS per unit wavelength, do not need it.
+Wavelengths may be in Å, nm, µm or other length units. For spectral-density conversions, they must be positive and finite, or NaN; NaN wavelengths propagate to the output. Wavelength is only needed when changing between the two spectral-density representations. Conversions such as µJy to nJy, or SI to CGS per unit wavelength, do not need it.
 
 Scaled units can be supplied directly, for example to express a spectrum in units of `1e-19 erg / (s cm² Å)`:
 
@@ -73,7 +76,7 @@ Scaled units can be supplied directly, for example to express a spectrum in unit
 flux_scaled, err_scaled = convert_flux(flux_jy, from_unit=u.Jy, to_unit=1e-19 * FLAM_CGS, err=err_jy, wave=wave)
 ```
 
-`FLAM_CGS` is `erg / (s cm² Å)` and `SI_FLUX_UNIT` is `W / m³`; both describe flux density per unit wavelength.
+`FLAM_CGS` is `erg / (s cm² Å)` and `FLAM_SI` is `W / m³`; both describe flux density per unit wavelength. The old names `CGS_FLUX_UNIT` and `SI_FLUX_UNIT` are deprecated aliases for `FLAM_CGS` and `FLAM_SI`.
 
 ### AB magnitudes and maggies
 
@@ -85,7 +88,7 @@ maggies = convert_flux_value(mag, from_unit=u.ABmag, to_unit=MAGGIE_UNIT)
 flux_cgs = convert_flux_value(maggies, from_unit=MAGGIE_UNIT, to_unit=FLAM_CGS, wave=wave)
 ```
 
-Magnitude uncertainties are in mag. If supplied as Quantities, they must use `u.mag`; the flux itself uses `u.ABmag`. Magnitude errors use first-order propagation, with wavelength treated as exact.
+Magnitude uncertainties are in mag. If supplied as Quantities, they must use units equivalent to `u.mag`, such as `u.mag` or `u.mmag`; the flux itself uses `u.ABmag`. Magnitude errors use first-order propagation, with wavelength treated as exact.
 
 AB magnitudes use Astropy's standard zero point of 3630.7805477 Jy. `MAGGIE_UNIT` is defined as 3631 Jy, so one maggie corresponds to approximately `-6.5623e-5 ABmag`.
 
@@ -98,9 +101,9 @@ cube = np.ones((len(wave), 3, 3)) * 1e-19
 cube_jy, _ = convert_flux(cube, from_unit=FLAM_CGS, to_unit=u.Jy, wave=wave[:, None, None])
 ```
 
-The functions use NumPy broadcasting without automatic reshaping. A scalar wavelength can also be used for an image or a whole cube.
+The functions use NumPy broadcasting without automatic reshaping. For spectral-density conversions with non-scalar flux, a wavelength array with more than one element must have the same number of dimensions as the flux. A scalar wavelength can also be used for an image or a whole cube.
 
-Linear fluxes may be signed. Converting zero flux to AB magnitude returns positive infinity; negative flux returns NaN. Masked arrays and magnitude systems other than AB are not supported.
+Linear fluxes may be signed. Converting zero or negative flux to AB magnitude returns NaN for both the magnitude and its uncertainty. Masked arrays and magnitude systems other than AB are not supported.
 
 ## Tests
 
